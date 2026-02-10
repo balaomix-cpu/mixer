@@ -4,10 +4,10 @@ import io
 import os
 
 # Configuração da página
-st.set_page_config(page_title="Mixador Profissional", page_icon="🎙️")
+st.set_page_config(page_title="Mixador Profissional v2", page_icon="🎙️")
 
-st.title("🎙️ Mixador de Áudio")
-st.write("A trilha de fundo tocará continuamente sob sua voz.")
+st.title("🎙️ Mixador de Áudio Pro")
+st.write("Mixagem com transições suaves e ganho de voz.")
 
 # Upload do áudio enviado pelo celular
 arquivo_voz = st.file_uploader("Envie seu áudio (.m4a, .mp3 ou .wav)", type=["m4a", "mp3", "wav"])
@@ -15,64 +15,67 @@ arquivo_voz = st.file_uploader("Envie seu áudio (.m4a, .mp3 ou .wav)", type=["m
 if arquivo_voz:
     st.audio(arquivo_voz, format='audio/m4a')
     
-    if st.button("✨ Gerar Mixagem Final"):
-        with st.spinner("Processando..."):
+    if st.button("✨ Gerar Mixagem com Transições"):
+        with st.spinner("Processando mixagem e ganho de áudio..."):
             try:
-                # 1. Carregar a voz enviada
+                # 1. Carregar a voz e aumentar o volume em 20% (+5 decibéis)
                 voz = AudioSegment.from_file(arquivo_voz)
+                voz = voz + 5  # Aumenta o volume da gravação
                 
-                # Caminhos dos arquivos
+                # Caminhos dos ativos
                 path_intro = "assets/intro.mp3"
                 path_saida = "assets/saida.mp3"
                 path_trilha = "assets/trilha_fundo.mp3"
 
-                # Verificar se os arquivos existem
                 if not os.path.exists(path_trilha):
-                    st.error(f"Arquivo {path_trilha} não encontrado na pasta assets!")
+                    st.error("Arquivo de trilha não encontrado!")
                 else:
                     intro = AudioSegment.from_file(path_intro)
                     saida = AudioSegment.from_file(path_saida)
                     trilha_base = AudioSegment.from_file(path_trilha)
 
                     # --- CONFIGURAÇÃO DA MIXAGEM ---
-                    respiro = 1000  # 1 segundo de folga nas pontas
+                    # Tempo de sobreposição para o crossfade (1000ms = 1 segundo)
+                    fade_time = 1000 
                     
-                    # Ajustar volume da trilha de fundo para -15dB (mais audível que antes)
+                    # Volume da trilha de fundo (mantido conforme seu feedback)
                     bg_volume = trilha_base - 15 
                     
-                    # Duração total do bloco do meio: 1s + voz + 1s
-                    tempo_total_meio = respiro + len(voz) + respiro
+                    # Duração da trilha: Voz + os tempos de fade
+                    duracao_total_bg = len(voz) + (fade_time * 2)
                     
-                    # Cortar a trilha_fundo.mp3 exatamente nesse tamanho total
-                    # Se for curta, ela repete. Se for longa, ela corta.
-                    bg_camada_fundo = (bg_volume * (tempo_total_meio // len(bg_volume) + 1))[:tempo_total_meio]
+                    # Preparar camada de fundo (loop/corte)
+                    bg_camada = (bg_volume * (duracao_total_bg // len(bg_volume) + 1))[:duracao_total_bg]
                     
-                    # Aplicar fade out suave na trilha antes de acabar
-                    bg_camada_fundo = bg_camada_fundo.fade_out(1000)
+                    # Aplicar fade in e fade out na trilha de fundo para suavizar a entrada/saída
+                    bg_camada = bg_camada.fade_in(fade_time).fade_out(fade_time)
 
-                    # A SOBREPOSIÇÃO (OVERLAY)
-                    # Colocamos a VOZ sobre a TRILHA_FUNDO, começando após 1 segundo
-                    bloco_misto = bg_camada_fundo.overlay(voz, position=respiro)
+                    # Sobrepor a voz no meio da trilha
+                    # A voz entra exatamente após o tempo de fade inicial
+                    bloco_misto = bg_camada.overlay(voz, position=fade_time)
                     
-                    # Montagem final em linha do tempo
-                    audio_final = intro + bloco_misto + saida
+                    # --- MONTAGEM COM CROSSFADE ---
+                    # Usamos append com crossfade para fundir a Vinheta com a Trilha/Voz
+                    # Isso elimina o "espaço" e faz um som entrar enquanto o outro sai
+                    passo1 = intro.append(bloco_misto, crossfade=fade_time)
+                    audio_final = passo1.append(saida, crossfade=fade_time)
                     # -------------------------------
 
-                    # Exportar para memória
+                    # Exportar
                     buffer = io.BytesIO()
                     audio_final.export(buffer, format="mp3")
                     
-                    st.success("✅ Mixagem pronta!")
+                    st.success("✅ Mixagem profissional concluída!")
                     st.audio(buffer, format="audio/mp3")
                     
                     st.download_button(
-                        label="📥 Baixar Áudio Final",
+                        label="📥 Baixar Áudio Editado",
                         data=buffer.getvalue(),
-                        file_name="mixagem_completa.mp3",
+                        file_name="podcast_mixado_suave.mp3",
                         mime="audio/mp3"
                     )
                     
             except Exception as e:
-                st.error(f"Erro técnico: {e}")
+                st.error(f"Erro: {e}")
 
-st.caption("Certifique-se de que trilha_fundo.mp3 está na pasta assets.")
+st.caption("Volume da voz aumentado e transições suavizadas.")
