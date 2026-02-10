@@ -25,7 +25,7 @@ if arquivo_voz:
     if st.button("✨ Gerar Áudio Mixado Profissional"):
         with st.spinner("Processando... Aguarde a mixagem."):
             try:
-                # 1. Carregar a voz enviada e garantir que os ativos existam
+                # 1. Carregar a voz enviada
                 voz = AudioSegment.from_file(arquivo_voz)
                 
                 # Caminhos dos arquivos na pasta assets
@@ -81,5 +81,4 @@ if arquivo_voz:
                 st.error(f"Ocorreu um erro inesperado: {e}")
                 st.info("Dica: Verifique se a versão do Python no Streamlit Cloud está em 3.11 ou 3.12.")
 
----
-st.caption("Desenvolvido para automação de conteúdo rápido.")
+st.caption("Ferramenta de edição automatizada.")
